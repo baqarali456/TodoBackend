@@ -1,11 +1,12 @@
 import mongoose from "mongoose";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const todoSchema = new mongoose.Schema({
     name:{
         type:String,
         required:true,
     },
-    markasDone:{
+    complete:{
      type:Boolean,
      default:false,
     },
@@ -22,4 +23,5 @@ const todoSchema = new mongoose.Schema({
 },{timestamps:true});
 
 
+todoSchema.plugin(mongooseAggregatePaginate)
 export const Todo = mongoose.model("Todo",todoSchema)
