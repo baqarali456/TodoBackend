@@ -3,12 +3,12 @@ import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const todoSchema = new mongoose.Schema({
     name:{
-        type:String,
-        required:true,
+        type: String,
+        required: true,
     },
     complete:{
-     type:Boolean,
-     default:false,
+     type: Boolean,
+     default: false,
     },
     subTodo:[
         {

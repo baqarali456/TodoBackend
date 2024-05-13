@@ -1,132 +1,200 @@
-import { Todo } from "../models/Todo.model";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { asyncHandler } from "../utils/asynchandler";
-import mongoose,{isValidObjectId} from "mongoose";
+import { Todo } from "../models/Todo.model.js";
+import { SubTodo } from "../models/subTodo.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asynchandler.js";
+import mongoose, { isValidObjectId } from "mongoose";
 
-const addTodo = asyncHandler(async(req,res)=>{
-    const {name} = req.body;
-    if(!name?.trim()){
-        throw new ApiError(401,"name is required") 
+const addTodo = asyncHandler(async (req, res) => {
+    const { name } = req.body;
+    if (!name?.trim()) {
+        throw new ApiError(401, "name is required")
     }
 
-   const todo = await Todo.create({
+    const todo = await Todo.create({
         name,
-        createdBy:req.user?._id
+        createdBy: req.user?._id
     })
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200,todo,"todo create successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, todo, "todo create successfully")
+        )
 })
 
 
-const updateTodoById = asyncHandler(async(req,res)=>{
-   try {
-     const {todoId} = req.params;
-     const {name} = req.body;
-    const isValidtodoId = isValidObjectId(todoId);
-    if(!isValidtodoId){
-     throw new ApiError(401,"todoId is required");
+const updateTodoById = asyncHandler(async (req, res) => {
+    try {
+        const { todoId } = req.params;
+        const { name, complete } = req.body;
+        const isValidtodoId = isValidObjectId(todoId);
+        if (!isValidtodoId) {
+            throw new ApiError(401, "todoId is required");
+        }
+        if (!name?.trim()) {
+            throw new ApiError(401, "name is required");
+        }
+
+        const updatedTodo = await Todo.findByIdAndUpdate(
+            todoId,
+            {
+                $set: {
+                    name,
+                    complete,
+                }
+            },
+            {
+                new: true,
+            }
+        )
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, updatedTodo, "update Todo Successfully")
+            );
+    } catch (error) {
+        return res
+            .status(500)
+            .json(
+                new ApiResponse(500, {}, "something went wrong while updating Todo")
+            )
     }
-    if(!name?.trim()){
-     throw new ApiError(401,"name is required");
-    }
- 
-   const updatedTodo = await Todo.findByIdAndUpdate(
-     todoId,
-     {
-         $set:{
-             name,
-         }
-     },
-     {
-        new : true,
-     }
-    )
- 
-    return res
-    .status(200)
-    .json(
-     new ApiResponse(200,updatedTodo,"update Todo Successfully")
-    );
-   } catch (error) {
-    return res
-    .status(500)
-    .json(
-        new ApiResponse(500,{},"something went wrong while updating Todo")
-    )
-   }
 
 
 })
-const getTodoById = asyncHandler(async(req,res)=>{
-   try {
-     const {todoId} = req.params;
-     
-    const isValidtodoId = isValidObjectId(todoId);
-    if(!isValidtodoId){
-     throw new ApiError(401,"todoId is required");
+const getTodoById = asyncHandler(async (req, res) => {
+    try {
+        const { todoId } = req.params;
+
+        const isValidtodoId = isValidObjectId(todoId);
+        if (!isValidtodoId) {
+            throw new ApiError(401, "todoId is required");
+        }
+
+
+        const getTodo = await Todo.findById(todoId)
+
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, getTodo, "get Todo Successfully")
+            );
+    } catch (error) {
+        return res
+            .status(500)
+            .json(
+                new ApiResponse(500, {}, "something went wrong while getting Todo")
+            )
     }
-    
- 
-   const getTodo = await Todo.findById(
-     todoId,
-    )
- 
-    return res
-    .status(200)
-    .json(
-     new ApiResponse(200,getTodo,"get Todo Successfully")
-    );
-   } catch (error) {
-    return res
-    .status(500)
-    .json(
-        new ApiResponse(500,{},"something went wrong while getting Todo")
-    )
-   }
 
 
 })
 
-
-const deleteTodoById = asyncHandler(async(req,res)=>{
-    const {todoId} = req.params;
-     
+const addSubtodoinMajorTodo = asyncHandler(async(req,res)=>{
+    const {todoId,subTodoId} = req.params;
     const isValidtodoId = isValidObjectId(todoId);
-    if(!isValidtodoId){
-     throw new ApiError(401,"todoId is not valid");
+        if (!isValidtodoId) {
+            throw new ApiError(401, "todoId is required");
+        }
+        const isValidsubTodoId = isValidObjectId(subTodoId);
+        if (!isValidsubTodoId) {
+            throw new ApiError(401, "subTodoId is required");
+        }
+
+      const majorTodo = await Todo.findById(todoId)
+      majorTodo.subTodo.push(subTodoId);
+     await majorTodo.save({validateBeforeSave:false})
+
+     return res
+     .status(200)
+     .json(new ApiResponse(200,majorTodo,"successfully add SubTodo in Todo"));
+})
+
+
+const deleteTodoById = asyncHandler(async (req, res) => {
+    const { todoId } = req.params;
+
+    const isValidtodoId = isValidObjectId(todoId);
+    if (!isValidtodoId) {
+        throw new ApiError(401, "todoId is not valid");
     }
 
-    const deletedTodo = await Todo.deleteOne({_id:todoId});
-    if(!deletedTodo){
-        throw new ApiError(500,"something went wrong while deleting Todo")
+    const deletedTodo = await Todo.deleteOne({ _id: todoId });
+    if (!deletedTodo) {
+        throw new ApiError(500, "something went wrong while deleting Todo")
     }
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200,deletedTodo,"successfully delete Todo")
-    );
+        .status(200)
+        .json(
+            new ApiResponse(200, deletedTodo, "successfully delete Todo")
+        );
 
 })
 
-const getallSubTodoinMainTodo = asyncHandler(async(req,res)=>{
+const getallSubTodosinMainTodo = asyncHandler(async (req, res) => {
 
-    const {todoId} = req.params;
-    const {page=1,limit=10} = req.query;
+    const { todoId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
     const isValidtodoId = isValidObjectId(todoId);
-    if(!isValidtodoId){
-     throw new ApiError(401,"todoId is not valid");
+    if (!isValidtodoId) {
+        throw new ApiError(401, "todoId is not valid");
     }
 
-   const allsubTodoaggregate = await Todo.aggregate([
+    const allsubTodoaggregate = await Todo.aggregate([
         {
-            $match:{
-                _id:new mongoose.Schema.Types.ObjectId(todoId)
+            $match: {
+                _id: new mongoose.Types.ObjectId(todoId)
+            }
+        },
+        {
+            $lookup: {
+                from: "subtodos",
+                localField: "subTodo",
+                foreignField:"_id",
+                as:"subTodo",
+                pipeline:[
+                    {
+                        $project:{
+                            content:1,
+                            complete:1,
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    const allSubTodoinMajorTodo = await SubTodo.aggregatePaginate(
+        allsubTodoaggregate,
+        {
+            page: Math.max(page, 1),
+            limit: Math.max(limit, 1),
+            pagination: true,
+            customLabels: {
+                totalDocs: "totalSubTodobyquery",
+                totalPages: true,
+                pagingCounter: true,
+                docs: "totalallsubTodo"
+            }
+        }
+    )
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, allSubTodoinMajorTodo, "get successfully all subTodo in major Todo")
+        )
+})
+
+const getallUserTodos = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10 } = req.query;
+    const todoaggregate = await Todo.aggregate([
+        {
+            $match: {
+                createdBy: new mongoose.Types.ObjectId(req.user._id)
             }
         },
         {
@@ -135,30 +203,39 @@ const getallSubTodoinMainTodo = asyncHandler(async(req,res)=>{
                 localField:"subTodo",
                 foreignField:"_id",
                 as:"subTodo",
+                pipeline:[
+                    {
+                        $project:{
+                            content:1,
+                            complete:1,
+                        }
+                    }
+                ]
             }
         }
     ])
 
-   const allSubTodoinMajorTodo = await Todo.aggregatePaginate(
-        allsubTodoaggregate,
+    const allTodos = await Todo.aggregatePaginate(
+        todoaggregate,
         {
-            page:Math.max(page,1),
-            limit:Math.max(limit,1),
-            pagination:true,
-            customLabels:{
-              totalDocs:"totalSubTodobyquery",
-              totalPages:true,
-              pagingCounter:true,
-              docs:"totalallsubTodo"
+            page: Math.max(page, 1),
+            limit: Math.max(limit, 1),
+            pagination: true,
+            customLabels: {
+                totalDocs: "allUserTodosbyquery",
+                totalPages: true,
+                pagingCounter: true,
+                docs: "totalallUserTodos"
             }
         }
+
     )
 
     return res
-    .status(200)
-    .json(
-        new ApiResponse(200,allSubTodoinMajorTodo,"get successfully all subTodo in major Todo")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, allTodos, "successfully fetched all Todos of User")
+        );
 })
 
 
@@ -167,5 +244,7 @@ export {
     updateTodoById,
     getTodoById,
     deleteTodoById,
-    getallSubTodoinMainTodo
+    getallSubTodosinMainTodo,
+    getallUserTodos,
+    addSubtodoinMajorTodo,
 }
