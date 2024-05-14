@@ -1,6 +1,8 @@
 import { app } from "./app.js";
 import { connectDB } from "./db/db.js";
 
+require('dotenv').config({path:"./.env"})
+
 
 connectDB()
 .then(()=>{
