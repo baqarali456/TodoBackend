@@ -143,6 +143,8 @@ const getallSubTodosinMainTodo = asyncHandler(async (req, res) => {
         throw new ApiError(401, "todoId is not valid");
     }
 
+    const mainTodo = await Todo.findById(todoId,{name:1});
+
     const allsubTodoaggregate = await Todo.aggregate([
         {
             $match: {
@@ -185,13 +187,12 @@ const getallSubTodosinMainTodo = asyncHandler(async (req, res) => {
     return res
         .status(200)
         .json(
-            new ApiResponse(200, allSubTodoinMajorTodo, "get successfully all subTodo in major Todo")
+            new ApiResponse(200, {mainTodo:mainTodo,allSubTodoinMajorTodo}, "get successfully all subTodo in major Todo")
         )
 })
 
 const getallUserTodos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10 } = req.query;
-    const todoaggregate = await Todo.aggregate([
+    const allTodos = await Todo.aggregate([
         {
             $match: {
                 createdBy: new mongoose.Types.ObjectId(req.user._id)
@@ -214,22 +215,6 @@ const getallUserTodos = asyncHandler(async (req, res) => {
             }
         }
     ])
-
-    const allTodos = await Todo.aggregatePaginate(
-        todoaggregate,
-        {
-            page: Math.max(page, 1),
-            limit: Math.max(limit, 1),
-            pagination: true,
-            customLabels: {
-                totalDocs: "allUserTodosbyquery",
-                totalPages: true,
-                pagingCounter: true,
-                docs: "totalallUserTodos"
-            }
-        }
-
-    )
 
     return res
         .status(200)
