@@ -25,6 +25,8 @@ const registerUser = asyncHandler(async (req, res) => {
         password,
     })
 
+    // send response
+
     return res
         .status(200)
         .json(
