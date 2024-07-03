@@ -1,6 +1,6 @@
 import {Router} from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { addSubtodoinMajorTodo, addTodo, deleteTodoById, getTodoById, getallSubTodosinMainTodo, getallUserTodos, updateTodoById } from "../controllers/Todo.controller.js";
+import { addSubtodoinMajorTodo, addTodo, deleteTodoById, getTodoById, getallSubTodosinMainTodo, getallUserTodos, updateTodoById,deleteSubtodoinMajorTodo } from "../controllers/Todo.controller.js";
 import { addSubTodo } from "../controllers/subTodo.controller.js";
 
 const todoRouter = Router()
@@ -14,5 +14,6 @@ todoRouter.route('/delete-todo/:todoId').delete(deleteTodoById);
 todoRouter.route('/getAll-subTodosinMajorTodo/:todoId').get(getallSubTodosinMainTodo);
 todoRouter.route('/getAll-userTodos').get(getallUserTodos);
 todoRouter.route('/addSubTodo-in-todo/:todoId/:subTodoId').post(addSubtodoinMajorTodo);
+todoRouter.route('/deleteSubTodo-in-todo/:todoId/:subTodoId').post(deleteSubtodoinMajorTodo);
 
 export {todoRouter};

@@ -60,9 +60,9 @@ const deleteSubTodoById = asyncHandler(async (req, res) => {
         throw new ApiError(401, "subtodoId is not valid");
     }
 
-    const deletedsubTodo = await subTodoId.deleteOne({ _id: subTodoId })
+    const deletedsubTodo = await SubTodo.deleteOne({ _id: subTodoId })
     if (!deletedsubTodo) {
-        throw new ApiError(500, "something went wrong while deleting subTodo")
+        throw new ApiError(401, "subTodo not found")
     }
 
     return res

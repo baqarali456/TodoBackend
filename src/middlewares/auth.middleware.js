@@ -4,17 +4,18 @@ import { asyncHandler } from "../utils/asynchandler.js";
 import jwt from "jsonwebtoken";
 
 const verifyJWT = asyncHandler(async(req,res,next)=>{
-  const userAccessToken = req.cookies?.accessToken || req.header('Authorization').slice(7)
-  
+  const userAccessToken = req.cookies?.accessToken || req.header('Authorization').replace("Bearer ","")
+  console.log(userAccessToken)
+  if(!userAccessToken){
+    throw new ApiError(401,"unauthorized request")
+  }
+
   const decodedToken = jwt.verify(userAccessToken,process.env.ACCESS_TOKEN_SECRET);
   console.log(decodedToken)
-  if(!decodedToken){
-    throw new ApiError(401,"Unauthorized request")
-  }
 
   const user = await User.findById(decodedToken._id);
   if(!user){
-    throw new ApiError(404,"user not found");
+    throw new ApiError(404,"invalid accessToken");
   }
 
   req.user = user;

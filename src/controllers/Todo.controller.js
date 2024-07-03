@@ -103,13 +103,23 @@ const addSubtodoinMajorTodo = asyncHandler(async(req,res)=>{
             throw new ApiError(401, "subTodoId is required");
         }
 
-      const majorTodo = await Todo.findById(todoId)
-      majorTodo.subTodo.push(subTodoId);
-     await majorTodo.save({validateBeforeSave:false})
+       const majorTodo = await Todo.findByIdAndUpdate(
+        todoId,
+        {
+            $push:{subTodo:subTodoId}
+        },
+        {
+            new :true
+        }
+       )
 
      return res
      .status(200)
      .json(new ApiResponse(200,majorTodo,"successfully add SubTodo in Todo"));
+})
+
+const deleteSubtodoinMajorTodo = asyncHandler(async(req,res)=>{
+    
 })
 
 
@@ -137,15 +147,14 @@ const deleteTodoById = asyncHandler(async (req, res) => {
 const getallSubTodosinMainTodo = asyncHandler(async (req, res) => {
 
     const { todoId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
     const isValidtodoId = isValidObjectId(todoId);
+    console.log(isValidtodoId)
     if (!isValidtodoId) {
         throw new ApiError(401, "todoId is not valid");
     }
 
-    const mainTodo = await Todo.findById(todoId,{name:1});
 
-    const allsubTodoaggregate = await Todo.aggregate([
+    const allsubTodosinTodo = await Todo.aggregate([
         {
             $match: {
                 _id: new mongoose.Types.ObjectId(todoId)
@@ -168,26 +177,13 @@ const getallSubTodosinMainTodo = asyncHandler(async (req, res) => {
             }
         }
     ])
-
-    const allSubTodoinMajorTodo = await SubTodo.aggregatePaginate(
-        allsubTodoaggregate,
-        {
-            page: Math.max(page, 1),
-            limit: Math.max(limit, 1),
-            pagination: true,
-            customLabels: {
-                totalDocs: "totalSubTodobyquery",
-                totalPages: true,
-                pagingCounter: true,
-                docs: "totalallsubTodo"
-            }
-        }
-    )
+    console.log(allsubTodosinTodo,"allSubtodo")
+    
 
     return res
         .status(200)
         .json(
-            new ApiResponse(200, {mainTodo:mainTodo,allSubTodoinMajorTodo}, "get successfully all subTodo in major Todo")
+            new ApiResponse(200, allsubTodosinTodo, "get successfully all subTodo in major Todo")
         )
 })
 
@@ -232,4 +228,5 @@ export {
     getallSubTodosinMainTodo,
     getallUserTodos,
     addSubtodoinMajorTodo,
+    deleteSubtodoinMajorTodo,
 }
