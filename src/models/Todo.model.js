@@ -2,24 +2,31 @@ import mongoose from "mongoose";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const todoSchema = new mongoose.Schema({
-    name:{
+    Title:{
         type: String,
         required: true,
     },
-    complete:{
-     type: Boolean,
-     default: false,
+    DueDate:{
+        type:Date,
     },
-    subTodo:[
-        {
-            type:mongoose.Schema.Types.ObjectId,
-            ref:"SubTodo"
-        }
-    ],
     createdBy:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"User",
-    }
+        index:true,
+    },
+    Description:{
+        type:String,
+        max:500,
+    },
+    Category:{
+        type:String,
+        enum:["Urgent","Non-Urgent"],
+        default:"Non-Urgent",
+    },
+    complete:{
+        type:Boolean,
+        default:false,
+    },
 },{timestamps:true});
 
 

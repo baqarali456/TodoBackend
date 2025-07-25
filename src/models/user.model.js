@@ -14,13 +14,20 @@ const userSchema = new mongoose.Schema({
         required:true,
         unique:true,
         lowercase:true,
+        index:true
     },
     password:{
         type:String,
+        min:[8,"password must be at least 8 characters"],
         required:[true,"password is required"],
     },
     refreshToken:{
         type:String,
+    },
+    role:{
+        type:String,
+        enum:['user','admin'],
+        default:'user'
     }
 },{timestamps:true})
 
@@ -38,7 +45,8 @@ userSchema.methods.generateAccessToken = function(){
         {
             _id:this._id,
             username:this.username,
-            email:this.email
+            email:this.email,
+            role:this.role
         },
          process.env.ACCESS_TOKEN_SECRET,
         {
@@ -50,6 +58,7 @@ userSchema.methods.generateRefreshToken = function(){
   return jwt.sign(
         {
             _id:this._id,
+            role:this.role,
         },
         process.env.REFRESH_TOKEN_SECRET,
         {

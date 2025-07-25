@@ -1,7 +1,8 @@
 import {Router} from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { addSubtodoinMajorTodo, addTodo, deleteTodoById, getTodoById, getallSubTodosinMainTodo, getallUserTodos, updateTodoById,deleteSubtodoinMajorTodo } from "../controllers/Todo.controller.js";
-import { addSubTodo } from "../controllers/subTodo.controller.js";
+import {  addTodo, deleteTodoById, getTodoById,  getallUserTodos, updateTodoById, adminGetAllUserTodos } from "../controllers/Todo.controller.js";
+import { isAdmin } from "../middlewares/admin.middleware.js";
+
 
 const todoRouter = Router()
 
@@ -11,9 +12,8 @@ todoRouter.route('/add-todo').post(addTodo);
 todoRouter.route('/update-todo/:todoId').patch(updateTodoById);
 todoRouter.route('/get-todo/:todoId').get(getTodoById);
 todoRouter.route('/delete-todo/:todoId').delete(deleteTodoById);
-todoRouter.route('/getAll-subTodosinMajorTodo/:todoId').get(getallSubTodosinMainTodo);
 todoRouter.route('/getAll-userTodos').get(getallUserTodos);
-todoRouter.route('/addSubTodo-in-todo/:todoId/:subTodoId').post(addSubtodoinMajorTodo);
-todoRouter.route('/deleteSubTodo-in-todo/:todoId/:subTodoId').post(deleteSubtodoinMajorTodo);
+todoRouter.route('/admin/getadminallUserTodos').get(isAdmin,adminGetAllUserTodos);
+
 
 export {todoRouter};

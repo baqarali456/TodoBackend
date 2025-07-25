@@ -1,47 +1,67 @@
 import { Todo } from "../models/Todo.model.js";
-import { SubTodo } from "../models/subTodo.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asynchandler.js";
 import mongoose, { isValidObjectId } from "mongoose";
 
 const addTodo = asyncHandler(async (req, res) => {
-    const { name } = req.body;
-    if (!name?.trim()) {
-        throw new ApiError(401, "name is required")
+    try {
+        const { Title,Description=null,Category='Non-Urgent',complete=false, } = req.body;
+        if (!Title?.trim()) {
+            throw new ApiError(401, "Title is required")
+        }
+    
+        const todo = await Todo.create({
+            Title,
+            Description,
+            Category,
+            complete,
+            createdBy: req.user?._id
+        })
+    
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, todo, "todo create successfully")
+            )
+    } catch (error) {
+        return res
+            .status(500)
+            .json(
+                new ApiResponse(500, {}, "something went wrong while creating Todo")
+            )
     }
-
-    const todo = await Todo.create({
-        name,
-        createdBy: req.user?._id
-    })
-
-    return res
-        .status(200)
-        .json(
-            new ApiResponse(200, todo, "todo create successfully")
-        )
 })
 
 
 const updateTodoById = asyncHandler(async (req, res) => {
     try {
         const { todoId } = req.params;
-        const { name, complete } = req.body;
+        const { Title,Description,Category,complete } = req.body;
         const isValidtodoId = isValidObjectId(todoId);
         if (!isValidtodoId) {
             throw new ApiError(401, "todoId is required");
         }
-        if (!name?.trim()) {
-            throw new ApiError(401, "name is required");
+        if (!Title?.trim()) {
+            throw new ApiError(401, "Title is required");
+        }
+
+        const todo = await Todo.findOne({ _id: todoId, createdBy: req.user._id });
+
+        if (req.user?.role === 'user') {
+            if (todo.createdBy.toString() !== req.user._id.toString()) {
+                throw new ApiError(401, "You are not authorized to update this todo");
+            }
         }
 
         const updatedTodo = await Todo.findByIdAndUpdate(
             todoId,
             {
                 $set: {
-                    name,
-                    complete,
+                    Title,
+                    Description,
+                    Category,
+                    complete
                 }
             },
             {
@@ -73,6 +93,11 @@ const getTodoById = asyncHandler(async (req, res) => {
             throw new ApiError(401, "todoId is required");
         }
 
+        const todo = await Todo.findOne({ _id: todoId, createdBy: req.user._id });
+
+        if (todo.createdBy.toString() !== req.user._id.toString()) {
+            throw new ApiError(403, "You are not authorized to get this todo");
+        }
 
         const getTodo = await Todo.findById(todoId)
 
@@ -92,44 +117,30 @@ const getTodoById = asyncHandler(async (req, res) => {
 
 })
 
-const addSubtodoinMajorTodo = asyncHandler(async(req,res)=>{
-    const {todoId,subTodoId} = req.params;
-    const isValidtodoId = isValidObjectId(todoId);
-        if (!isValidtodoId) {
-            throw new ApiError(401, "todoId is required");
-        }
-        const isValidsubTodoId = isValidObjectId(subTodoId);
-        if (!isValidsubTodoId) {
-            throw new ApiError(401, "subTodoId is required");
-        }
 
-       const majorTodo = await Todo.findByIdAndUpdate(
-        todoId,
-        {
-            $push:{subTodo:subTodoId}
-        },
-        {
-            new :true
-        }
-       )
-
-     return res
-     .status(200)
-     .json(new ApiResponse(200,majorTodo,"successfully add SubTodo in Todo"));
-})
-
-const deleteSubtodoinMajorTodo = asyncHandler(async(req,res)=>{
-    
-})
 
 
 const deleteTodoById = asyncHandler(async (req, res) => {
     const { todoId } = req.params;
 
     const isValidtodoId = isValidObjectId(todoId);
+    console.log(isValidtodoId)
     if (!isValidtodoId) {
         throw new ApiError(401, "todoId is not valid");
     }
+
+
+    const todo = await Todo.findOne({ _id: todoId, createdBy: req.user._id });
+
+    if (req.user?.role === 'user') {
+        if (todo.createdBy.toString() !== req.user._id.toString()) {
+            throw new ApiError(403, "You are not authorized to delete this todo");
+        }
+    }
+    if (!todo) {
+        throw new ApiError(404, "todo not found")
+    }
+
 
     const deletedTodo = await Todo.deleteOne({ _id: todoId });
     if (!deletedTodo) {
@@ -144,50 +155,40 @@ const deleteTodoById = asyncHandler(async (req, res) => {
 
 })
 
-const getallSubTodosinMainTodo = asyncHandler(async (req, res) => {
-
-    const { todoId } = req.params;
-    const isValidtodoId = isValidObjectId(todoId);
-    console.log(isValidtodoId)
-    if (!isValidtodoId) {
-        throw new ApiError(401, "todoId is not valid");
-    }
 
 
-    const allsubTodosinTodo = await Todo.aggregate([
+const adminGetAllUserTodos = asyncHandler(async (req, res) => {
+
+    const { page = 1, limit = 10 } = req.query;
+    const alluserTodos = await Todo.aggregate([
         {
             $match: {
-                _id: new mongoose.Types.ObjectId(todoId)
-            }
-        },
-        {
-            $lookup: {
-                from: "subtodos",
-                localField: "subTodo",
-                foreignField:"_id",
-                as:"subTodo",
-                pipeline:[
-                    {
-                        $project:{
-                            content:1,
-                            complete:1,
-                        }
-                    }
-                ]
+
             }
         }
     ])
-    console.log(allsubTodosinTodo,"allSubtodo")
-    
+
+    const admin_getalluserTodos = await Todo.aggregatePaginate(alluserTodos, {
+        page: page || 1,
+        limit: limit || 10,
+        sort: { createdAt: -1 },
+        customLabels: {
+            docs: 'todos',
+            totalDocs: 'totalTodos',
+            limit: 'perPage',
+            page: 'currentPage',
+        },
+    })
 
     return res
         .status(200)
         .json(
-            new ApiResponse(200, allsubTodosinTodo, "get successfully all subTodo in major Todo")
-        )
+            new ApiResponse(200, admin_getalluserTodos, "successfully fetched all Todos of Users")
+        );
 })
 
 const getallUserTodos = asyncHandler(async (req, res) => {
+    const { page = 1, limit = 10 } = req.query;
     const allTodos = await Todo.aggregate([
         {
             $match: {
@@ -195,16 +196,31 @@ const getallUserTodos = asyncHandler(async (req, res) => {
             }
         },
         {
-            $lookup:{
-                from:"subtodos",
-                localField:"subTodo",
-                foreignField:"_id",
-                as:"subTodo",
-                pipeline:[
+            $lookup: {
+                from: "subtodos",
+                localField: "subTodo",
+                foreignField: "_id",
+                as: "subTodo",
+                pipeline: [
                     {
-                        $project:{
-                            content:1,
-                            complete:1,
+                        $project: {
+                            content: 1,
+                            complete: 1,
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "createdBy",
+                foreignField: "_id",
+                as: "createdBy",
+                pipeline: [
+                    {
+                        $project: {
+                            userTitle: 1,
                         }
                     }
                 ]
@@ -212,12 +228,27 @@ const getallUserTodos = asyncHandler(async (req, res) => {
         }
     ])
 
+
+    const aggregatedTodos = await Todo.aggregatePaginate(allTodos, {
+        page: page || 1,
+        limit: limit || 10,
+        sort: { createdAt: -1 },
+        customLabels: {
+            docs: 'todos',
+            totalDocs: 'totalTodos',
+            limit: 'perPage',
+            page: 'currentPage',
+        },
+    })
+
     return res
         .status(200)
         .json(
-            new ApiResponse(200, allTodos, "successfully fetched all Todos of User")
+            new ApiResponse(200, aggregatedTodos, "successfully fetched all Todos of User")
         );
 })
+
+
 
 
 export {
@@ -225,8 +256,6 @@ export {
     updateTodoById,
     getTodoById,
     deleteTodoById,
-    getallSubTodosinMainTodo,
     getallUserTodos,
-    addSubtodoinMajorTodo,
-    deleteSubtodoinMajorTodo,
+    adminGetAllUserTodos,
 }
