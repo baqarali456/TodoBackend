@@ -78,7 +78,7 @@ const updateTodoById = asyncHandler(async (req, res) => {
         return res
             .status(500)
             .json(
-                new ApiResponse(500, {}, "something went wrong while updating Todo")
+                new ApiResponse(500, {}, error.message || "something went wrong while updating Todo")
             )
     }
 
@@ -110,7 +110,7 @@ const getTodoById = asyncHandler(async (req, res) => {
         return res
             .status(500)
             .json(
-                new ApiResponse(500, {}, "something went wrong while getting Todo")
+                new ApiResponse(500, {}, error.message || "something went wrong while getting Todo")
             )
     }
 
@@ -121,37 +121,45 @@ const getTodoById = asyncHandler(async (req, res) => {
 
 
 const deleteTodoById = asyncHandler(async (req, res) => {
-    const { todoId } = req.params;
-
-    const isValidtodoId = isValidObjectId(todoId);
-    console.log(isValidtodoId)
-    if (!isValidtodoId) {
-        throw new ApiError(401, "todoId is not valid");
-    }
-
-
-    const todo = await Todo.findOne({ _id: todoId, createdBy: req.user._id });
-
-    if (req.user?.role === 'user') {
-        if (todo.createdBy.toString() !== req.user._id.toString()) {
-            throw new ApiError(403, "You are not authorized to delete this todo");
+    try {
+        const { todoId } = req.params;
+    
+        const isValidtodoId = isValidObjectId(todoId);
+        console.log(isValidtodoId)
+        if (!isValidtodoId) {
+            throw new ApiError(401, "todoId is not valid");
         }
-    }
-    if (!todo) {
-        throw new ApiError(404, "todo not found")
-    }
-
-
-    const deletedTodo = await Todo.deleteOne({ _id: todoId });
-    if (!deletedTodo) {
-        throw new ApiError(500, "something went wrong while deleting Todo")
-    }
-
-    return res
-        .status(200)
+    
+    
+        const todo = await Todo.findOne({ _id: todoId, createdBy: req.user._id });
+    
+        if (req.user?.role === 'user') {
+            if (todo.createdBy.toString() !== req.user._id.toString()) {
+                throw new ApiError(403, "You are not authorized to delete this todo");
+            }
+        }
+        if (!todo) {
+            throw new ApiError(404, "todo not found")
+        }
+    
+    
+        const deletedTodo = await Todo.deleteOne({ _id: todoId });
+        if (!deletedTodo) {
+            throw new ApiError(404, "todo doesn't exist")
+        }
+    
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, deletedTodo, "successfully delete Todo")
+            );
+    } catch (error) {
+        return res
+        .status(500)
         .json(
-            new ApiResponse(200, deletedTodo, "successfully delete Todo")
-        );
+            new ApiResponse(500, {}, error.message || "something went wrong while deleting Todo")
+        )
+    }
 
 })
 
@@ -159,93 +167,107 @@ const deleteTodoById = asyncHandler(async (req, res) => {
 
 const adminGetAllUserTodos = asyncHandler(async (req, res) => {
 
-    const { page = 1, limit = 10 } = req.query;
-    const alluserTodos = await Todo.aggregate([
-        {
-            $match: {
-
+try {
+        const { page = 1, limit = 10 } = req.query;
+        const alluserTodos = await Todo.aggregate([
+            {
+                $match: {} ,
             }
-        }
-    ])
-
-    const admin_getalluserTodos = await Todo.aggregatePaginate(alluserTodos, {
-        page: page || 1,
-        limit: limit || 10,
-        sort: { createdAt: -1 },
-        customLabels: {
-            docs: 'todos',
-            totalDocs: 'totalTodos',
-            limit: 'perPage',
-            page: 'currentPage',
-        },
-    })
-
+        ])
+    
+        const admin_getalluserTodos = await Todo.aggregatePaginate(alluserTodos, {
+            page: page || 1,
+            limit: limit || 10,
+            sort: { createdAt: -1 },
+            customLabels: {
+                docs: 'todos',
+                totalDocs: 'totalTodos',
+                limit: 'perPage',
+                page: 'currentPage',
+            },
+        })
+    
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, admin_getalluserTodos, "successfully fetched all Todos of Users")
+            );
+} catch (error) {
     return res
-        .status(200)
-        .json(
-            new ApiResponse(200, admin_getalluserTodos, "successfully fetched all Todos of Users")
-        );
+    .status(500)
+    .json(
+        new ApiResponse(500,{},error.message || "something went wrong  while adminGetAllUserTodos ")
+    )
+}
 })
 
 const getallUserTodos = asyncHandler(async (req, res) => {
-    const { page = 1, limit = 10 } = req.query;
-    const allTodos = await Todo.aggregate([
-        {
-            $match: {
-                createdBy: new mongoose.Types.ObjectId(req.user._id)
-            }
-        },
-        {
-            $lookup: {
-                from: "subtodos",
-                localField: "subTodo",
-                foreignField: "_id",
-                as: "subTodo",
-                pipeline: [
-                    {
-                        $project: {
-                            content: 1,
-                            complete: 1,
+    try {
+        const { page = 1, limit = 10 } = req.query;
+        const allTodos = await Todo.aggregate([
+            {
+                $match: {
+                    createdBy: new mongoose.Types.ObjectId(req.user?._id)
+                }
+            },
+            {
+                $lookup: {
+                    from: "subtodos",
+                    localField: "subTodo",
+                    foreignField: "_id",
+                    as: "subTodo",
+                    pipeline: [
+                        {
+                            $project: {
+                                content: 1,
+                                complete: 1,
+                            }
                         }
-                    }
-                ]
-            }
-        },
-        {
-            $lookup: {
-                from: "users",
-                localField: "createdBy",
-                foreignField: "_id",
-                as: "createdBy",
-                pipeline: [
-                    {
-                        $project: {
-                            userTitle: 1,
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy",
+                    pipeline: [
+                        {
+                            $project: {
+                                userTitle: 1,
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             }
-        }
-    ])
-
-
-    const aggregatedTodos = await Todo.aggregatePaginate(allTodos, {
-        page: page || 1,
-        limit: limit || 10,
-        sort: { createdAt: -1 },
-        customLabels: {
-            docs: 'todos',
-            totalDocs: 'totalTodos',
-            limit: 'perPage',
-            page: 'currentPage',
-        },
-    })
-
-    return res
-        .status(200)
+        ])
+    
+    
+        const aggregatedTodos = await Todo.aggregatePaginate(allTodos, {
+            page: page || 1,
+            limit: limit || 10,
+            sort: { createdAt: -1 },
+            customLabels: {
+                docs: 'todos',
+                totalDocs: 'totalTodos',
+                limit: 'perPage',
+                page: 'currentPage',
+            },
+        })
+    
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, aggregatedTodos, "successfully fetched all Todos of User")
+            );
+    } catch (error) {
+        return res
+        .status(500)
         .json(
-            new ApiResponse(200, aggregatedTodos, "successfully fetched all Todos of User")
-        );
+            new ApiResponse(500,{},error.message || "something went wrong  while user GetAllUserTodos ")
+        )
+    }
 })
 
 

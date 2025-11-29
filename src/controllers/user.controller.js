@@ -50,46 +50,54 @@ const registerUser = asyncHandler(async (req, res) => {
 })
 
 const loginUser = asyncHandler(async (req, res) => {
-    const { username, email, password } = req.body;
-    if (!username && !email) {
-        throw new ApiError(401, "username or email is required")
+    try {
+        const { username, email, password } = req.body;
+        if (!username && !email) {
+            throw new ApiError(401, "username or email is required")
+        }
+    
+        const user = await User.findOne({
+            $or: [{ username }, { email }]
+        })
+        if (!user) {
+            throw new ApiError(404, "user not register")
+        }
+    
+        const isPasswordValid = await user.isPasswordCorrect(password)
+        if (!isPasswordValid) {
+            throw new ApiError(401, "password is wrong")
+        }
+    
+        const accessToken = user.generateAccessToken()
+        const newRefreshToken = user.generateRefreshToken()
+        user.refreshToken = newRefreshToken;
+        await user.save({ validateBeforeSave: false });
+    
+        const loggedInUser = await User.findById(user._id).select(" -password -refreshToken")
+        console.log(loggedInUser)
+    
+    
+        const options = {
+            httpOnly: true,
+            secure: true,
+        }
+    
+    
+    
+        return res
+            .status(200)
+            .cookie('accessToken', accessToken, options)
+            .cookie("refreshToken", newRefreshToken, options)
+            .json(
+                new ApiResponse(200, { user: loggedInUser, accessToken: accessToken, refreshToken: newRefreshToken }, "user successfully login")
+            )
+    } catch (error) {
+        return res
+            .status(500)
+            .json(
+                new ApiResponse(500, {}, error.message ||"Internal Server Error while login user")
+            )
     }
-
-    const user = await User.findOne({
-        $or: [{ username }, { email }]
-    })
-    if (!user) {
-        throw new ApiError(404, "user not register")
-    }
-
-    const isPasswordValid = await user.isPasswordCorrect(password)
-    if (!isPasswordValid) {
-        throw new ApiError(401, "password is wrong")
-    }
-
-    const accessToken = user.generateAccessToken()
-    const newRefreshToken = user.generateRefreshToken()
-    user.refreshToken = newRefreshToken;
-    await user.save({ validateBeforeSave: false });
-
-    const loggedInUser = await User.findById(user._id).select(" -password -refreshToken")
-    console.log(loggedInUser)
-
-
-    const options = {
-        httpOnly: true,
-        secure: true,
-    }
-
-
-
-    return res
-        .status(200)
-        .cookie('accessToken', accessToken, options)
-        .cookie("refreshToken", newRefreshToken, options)
-        .json(
-            new ApiResponse(200, { user: loggedInUser, accessToken: accessToken, refreshToken: newRefreshToken }, "user successfully login")
-        )
 
 
 })
