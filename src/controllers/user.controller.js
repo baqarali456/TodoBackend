@@ -25,6 +25,7 @@ const registerUser = asyncHandler(async (req, res) => {
             username,
             email,
             password,
+            role,
         })
     
     
