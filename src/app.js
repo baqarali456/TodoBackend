@@ -14,7 +14,7 @@ app.use(express.urlencoded({limit:"16kb",extended:true}))
 app.use(express.static("public"))
 app.use(cookieParser())
 
-app.use((req,res)=>{
+app.get('/',(req,res)=>{
     res.send("Welcome to Todo App")
 })
 
