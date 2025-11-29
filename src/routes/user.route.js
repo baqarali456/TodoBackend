@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { adminChangeUserRole, changePassword, getadminAllUsers, getCurrentUser, getuserId, loginUser, logoutUser, refreshingrefreshToken, registerUser } from "../controllers/user.controller.js";
 import {verifyJWT} from "../middlewares/auth.middleware.js"
+import {isAdmin} from "../middlewares/admin.middleware.js";
 const userRouter = Router()
 
 userRouter.route('/register-user').post(registerUser)
