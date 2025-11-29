@@ -42,7 +42,7 @@ const registerUser = asyncHandler(async (req, res) => {
         return res
             .status(500)
             .json(
-                new ApiResponse(500, {}, "Internal Server Error")
+                new ApiResponse(500, {}, error.message ||"Internal Server Error")
             )
     }
 
