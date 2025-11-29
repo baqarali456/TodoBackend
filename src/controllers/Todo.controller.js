@@ -28,7 +28,7 @@ const addTodo = asyncHandler(async (req, res) => {
 
 
 const updateTodoById = asyncHandler(async (req, res) => {
-    try {
+    
         const { todoId } = req.params;
         const { Title,Description,Category,complete } = req.body;
         const isValidtodoId = isValidObjectId(todoId);
