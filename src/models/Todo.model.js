@@ -6,9 +6,6 @@ const todoSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    DueDate:{
-        type:Date,
-    },
     createdBy:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"User",
@@ -17,11 +14,6 @@ const todoSchema = new mongoose.Schema({
     Description:{
         type:String,
         max:500,
-    },
-    Category:{
-        type:String,
-        enum:["Urgent","Non-Urgent"],
-        default:"Non-Urgent",
     },
     complete:{
         type:Boolean,
