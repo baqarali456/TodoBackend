@@ -7,33 +7,33 @@ import jwt from "jsonwebtoken";
 
 const registerUser = asyncHandler(async (req, res) => {
     try {
-        const { username, password, email,role='user' } = req.body;
-        if ([username, password, email,role].some(field => field?.trim() === "")) {
+        const { username, password, email, role = 'user' } = req.body;
+        if ([username, password, email, role].some(field => field?.trim() === "")) {
             throw new ApiError(401, "all Fields are required")
         }
         // check already user register;
-    
+
         const ExistingUser = await User.findOne({
             $or: [{ username }, { email }]
         })
-    
+
         if (ExistingUser) {
             throw new ApiError(400, "user already register")
         }
-    
+
         const registeringUser = await User.create({
             username,
             email,
             password,
             role,
         })
-    
-    
-    
-    
-    
+
+
+
+
+
         // send response
-    
+
         return res
             .status(200)
             .json(
@@ -43,7 +43,7 @@ const registerUser = asyncHandler(async (req, res) => {
         return res
             .status(500)
             .json(
-                new ApiResponse(500, {}, error.message ||"Internal Server Error")
+                new ApiResponse(500, {}, error.message || "Internal Server Error")
             )
     }
 
@@ -55,35 +55,40 @@ const loginUser = asyncHandler(async (req, res) => {
         if (!username && !email) {
             throw new ApiError(401, "username or email is required")
         }
-    
+
         const user = await User.findOne({
             $or: [{ username }, { email }]
         })
         if (!user) {
             throw new ApiError(404, "user not register")
         }
-    
+
         const isPasswordValid = await user.isPasswordCorrect(password)
         if (!isPasswordValid) {
-            throw new ApiError(401, "password is wrong")
+            throw new ApiError(400, "password is wrong")
         }
-    
+
         const accessToken = user.generateAccessToken()
         const newRefreshToken = user.generateRefreshToken()
         user.refreshToken = newRefreshToken;
         await user.save({ validateBeforeSave: false });
-    
+
         const loggedInUser = await User.findById(user._id).select(" -password -refreshToken")
         console.log(loggedInUser)
-    
-    
+
+
+        const isProd = process.env.NODE_ENV === "production";
+
+
         const options = {
             httpOnly: true,
-            secure: true,
+            secure: isProd,                // ❗ false on localhost
+            sameSite: isProd ? "none" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000
         }
-    
-    
-    
+
+
+
         return res
             .status(200)
             .cookie('accessToken', accessToken, options)
@@ -95,7 +100,7 @@ const loginUser = asyncHandler(async (req, res) => {
         return res
             .status(500)
             .json(
-                new ApiResponse(500, {}, error.message ||"Internal Server Error while login user")
+                new ApiResponse(500, {}, error.message || "Internal Server Error while login user")
             )
     }
 
@@ -201,7 +206,7 @@ const changePassword = asyncHandler(async (req, res) => {
         throw new ApiError(401, "old password is wrong");
     }
 
-     await User.findByIdAndUpdate(
+    await User.findByIdAndUpdate(
         req.user._id,
         {
             $set: {
@@ -214,35 +219,34 @@ const changePassword = asyncHandler(async (req, res) => {
     )
 
     return res
-    .status(200)
-    .json(
-      new ApiResponse(200,{},"update Password is successfully")
-    )
+        .status(200)
+        .json(
+            new ApiResponse(200, {}, "update Password is successfully")
+        )
 })
 
-const getadminAllUsers = asyncHandler(async (req, res) =>
-     {
-        try {
-           const allusers =  await User.find();
-            return res
-                .status(200)
-                .json(
-                    new ApiResponse(200, allusers, "get all users successfully")
-                )
-        } catch (error) {
-             
-            return res
-                .status(500)
-                .json(
-                    new ApiResponse(500, {}, "something went wrong while admin getting all users")
-                )
-        }
-     }
+const getadminAllUsers = asyncHandler(async (req, res) => {
+    try {
+        const allusers = await User.find();
+        return res
+            .status(200)
+            .json(
+                new ApiResponse(200, allusers, "get all users successfully")
+            )
+    } catch (error) {
+
+        return res
+            .status(500)
+            .json(
+                new ApiResponse(500, {}, "something went wrong while admin getting all users")
+            )
+    }
+}
 )
 
-const adminChangeUserRole = asyncHandler(async(req,res)=>{
+const adminChangeUserRole = asyncHandler(async (req, res) => {
     try {
-        const {role} = req.body;
+        const { role } = req.body;
         await User.findByIdAndUpdate(
             req.user._id,
             {
@@ -260,7 +264,7 @@ const adminChangeUserRole = asyncHandler(async(req,res)=>{
                 new ApiResponse(200, {}, "User role updated successfully")
             );
     } catch (error) {
-        
+
         return res
             .status(500)
             .json(
@@ -269,4 +273,4 @@ const adminChangeUserRole = asyncHandler(async(req,res)=>{
     }
 })
 
-export { registerUser, loginUser, logoutUser, getCurrentUser, getuserId, refreshingrefreshToken, changePassword,getadminAllUsers,adminChangeUserRole }
+export { registerUser, loginUser, logoutUser, getCurrentUser, getuserId, refreshingrefreshToken, changePassword, getadminAllUsers, adminChangeUserRole }
