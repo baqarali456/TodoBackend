@@ -84,6 +84,7 @@ const loginUser = asyncHandler(async (req, res) => {
             httpOnly: true,
             secure: isProd,                // ❗ false on localhost
             sameSite: isProd ? "none" : "lax",
+            maxAge:24*60*60*1000
         }
 
 
