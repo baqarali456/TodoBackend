@@ -6,7 +6,7 @@ import mongoose, { isValidObjectId } from "mongoose";
 
 const addTodo = asyncHandler(async (req, res) => {
         try {
-            const { Title,Description=null} = req.body;
+            const { Title,Description=null,complete=false} = req.body;
             if (!Title?.trim()) {
                 throw new ApiError(401, "Title is required")
             }
